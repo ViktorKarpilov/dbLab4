@@ -76,7 +76,7 @@ select distinct
 from zno_persons zp
 on conflict do nothing;
 
-INSERT INTO public.addresses (reg_name, area_name, ter_name)
+INSERT INTO addresses (reg_name, area_name, ter_name)
 select distinct regname, areaname, tername from zno_persons;
 
 insert into organizationtypes 
@@ -97,7 +97,7 @@ select distinct
 from zno_persons zp
 on conflict do nothing;
 
-INSERT INTO public.organizations (name, typename, parent, address_id)
+INSERT INTO organizations (name, typename, parent, address_id)
 select distinct on (eoname)
 case
 		when eoname is NULL then 'КПІ'
@@ -112,7 +112,7 @@ and ter_name = eotername limit 1) from zno_persons
 order by eoname,eoparent desc nulls first;
 
 
-INSERT INTO public.students (outid, birthyear, sex, tertypename, classprofilename, classlangname, study_place, birth_address_id) 
+INSERT INTO students (outid, birthyear, sex, tertypename, classprofilename, classlangname, study_place, birth_address_id) 
 select outid, birth, sextypename, tertypename, classprofilename, classlangname,
 (select name from organizations as o1
 where o1.name = z1.eoname limit 1),
@@ -122,7 +122,7 @@ where a1.area_name  = z1.areaname
 and a1.reg_name = z1.regname
 and a1.ter_name = z1.tername limit 1) from zno_persons as z1;
 
-INSERT INTO public.subjects
+INSERT INTO subjects
 values
 ('Українська мова і література')
 ,('Історія України')
@@ -137,7 +137,7 @@ values
 ,('Англійська мова');
 
 
-INSERT INTO public.exam (person, exam_year, subject, status, ball100, ball12, ball, adaptscale, exam_organization)
+INSERT INTO exam (person, exam_year, subject, status, ball100, ball12, ball, adaptscale, exam_organization)
 select 
 outid, year, ukrtest, ukrteststatus, ukrball100, ukrball12, ukrball, ukradaptscale,
 case 
@@ -177,7 +177,7 @@ from zno_persons zp
 
 on conflict do nothing;
 
-INSERT INTO public.exam (person, exam_year, subject,"language", status, ball100, ball12, ball, adaptscale, exam_organization)
+INSERT INTO exam (person, exam_year, subject,"language", status, ball100, ball12, ball, adaptscale, exam_organization)
 select 
 outid, year, histtest, histlang, histteststatus, histball100, histball12, histball, null,
 case 
@@ -189,7 +189,7 @@ end
 from zno_persons as z1
 where histtest notnull ;
 
-INSERT INTO public.exam (person, exam_year, subject,"language", status, ball100, ball12, ball, adaptscale, exam_organization)
+INSERT INTO exam (person, exam_year, subject,"language", status, ball100, ball12, ball, adaptscale, exam_organization)
 select 
 outid, year, mathtest, mathlang, mathteststatus, mathball100, mathball12, mathball,null,
 case 
@@ -201,7 +201,7 @@ end
 from zno_persons as z1
 where mathtest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject,"language", status, ball100, ball12, ball, adaptscale, exam_organization)
+INSERT INTO exam (person, exam_year, subject,"language", status, ball100, ball12, ball, adaptscale, exam_organization)
 select 
 outid , year, phystest, physlang, physteststatus, physball100, physball12, physball,null,
 case 
@@ -213,7 +213,7 @@ end
 from zno_persons as z1
 where phystest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject,"language", status, ball100, ball12, ball, exam_organization)
+INSERT INTO exam (person, exam_year, subject,"language", status, ball100, ball12, ball, exam_organization)
 select 
 outid, year, chemtest, chemlang, chemteststatus, chemball100, chemball12, chemball,
 case 
@@ -225,7 +225,7 @@ end
 from zno_persons as z1
 where chemtest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject,"language", status, ball100, ball12, ball, exam_organization)
+INSERT INTO exam (person, exam_year, subject,"language", status, ball100, ball12, ball, exam_organization)
 select distinct 
 outid, year, biotest, biolang, bioteststatus, bioball100, bioball12, bioball,
 case 
@@ -237,7 +237,7 @@ end
 from zno_persons as z1
 where biotest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject,"language", status, ball100, ball12, ball, exam_organization)
+INSERT INTO exam (person, exam_year, subject,"language", status, ball100, ball12, ball, exam_organization)
 select distinct
 outid, year, geotest, geolang, geoteststatus, geoball100, geoball12, geoball,
 case 
@@ -249,7 +249,7 @@ end
 from zno_persons as z1
 where geotest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
+INSERT INTO exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
 select distinct
 outid, year, engtest, engteststatus, engball100, engball12, engdpalevel, engball,
 case 
@@ -261,7 +261,7 @@ end
 from zno_persons as z1
 where engtest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
+INSERT INTO exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
 select distinct
 outid, year, fratest, frateststatus, fraball100, fraball12, fradpalevel, fraball,
 case 
@@ -273,7 +273,7 @@ end
 from zno_persons as z1
 where fratest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
+INSERT INTO exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
 select distinct
 outid, year, deutest, deuteststatus, deuball100, deuball12, deudpalevel, deuball, 
 case 
@@ -285,7 +285,7 @@ end
 from zno_persons as z1
 where deutest notnull;
 
-INSERT INTO public.exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
+INSERT INTO exam (person, exam_year, subject, status, ball100, ball12,dpalevel, ball, exam_organization)
 select distinct
 outid, year, spatest, spateststatus, spaball100, spaball12, spadpalevel, spaball, 
 case 
