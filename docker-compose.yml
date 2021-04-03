@@ -21,15 +21,12 @@ services:
         timeout: 10s
         retries: 10
   builder:
-    image: python:3
-    links:
-      - db
-    command: bash -c "
-             pip3 install  psycopg2-binary
-             && cd /app
-             && python3 KPI_DB_Migrations/initial.py db"
+    image: flyway/flyway
+    command: -url=jdbc:postgresql://db/ -schemas=public -user=postgres -password=YourStrongPassw0rd -connectRetries=60 migrate
     volumes:
-    - ./:/app/
+      - ./KPI_DB_Migrations:/flyway/sql
+    depends_on:
+      - db
 
 volumes:
   pgdata:
