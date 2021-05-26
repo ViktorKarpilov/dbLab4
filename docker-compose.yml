@@ -1,32 +1,14 @@
 version: '3.7'
 
 services:
-  db:
-      image: postgres:13
-      labels:
-        - study-db
-      restart: unless-stopped
-      environment:
-        POSTGRES_PASSWORD: YourStrongPassw0rd
-        POSTGRES_DB: study
-      ports:
-        - "5432:5432"
-      volumes:
-        - pgdata:/var/lib/postgresql/data
-      expose:
-        - "5432"
-      healthcheck:
-        test: psql -U postgres -c '\l'
-        interval: 1s
-        timeout: 10s
-        retries: 10
-  migrator:
-    image: flyway/flyway
-    command: -url=jdbc:postgresql://db/study -schemas=public -user=postgres -password=YourStrongPassw0rd -connectRetries=60 migrate
-    volumes:
-      - ./KPI_DB_Migrations:/flyway/sql
-    depends_on:
-      - db
+  mongo:
+    image: mongo:latest
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - 28017:27017 
 
 volumes:
   pgdata:

@@ -1,97 +1,97 @@
 import sys  
 sys.path.append("KPI_DB_Migrations")  
-from initial import GetSection, GetStructure 
 import psycopg2
 import csv
 import os
+from pymongo import MongoClient
+import datetime
+import urllib
 
-def populateDatabase(yearToStart = 2019):
-    root_folder = GetSection("root_dataset_folder")
-    fileNames = GetSection('file_names')
+conn_string = "mongodb://root:" + "example" + "@127.0.0.1:28017/"
+client = MongoClient(conn_string)
+db = client.db_zno
 
-    conn_string = GetSection("connection_string")
+def populateDatabase(yearToStart = 2019, fileName = "Odata2019File.csv"):
+	batch_size = 1000
 
-    conn = psycopg2.connect(conn_string)
-    cur = conn.cursor()
-
-    structure = list(GetStructure().keys())
-
-    for year in range(int(yearToStart)+2-len(fileNames), 2021):
-        with open(os.path.join(root_folder, fileNames[str(year)]+".csv"), encoding='windows-1251') as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=';')
-            csv_reader.__next__()
-
-            cur.execute("SELECT COUNT(*) FROM zno_persons")
-            records_count = cur.fetchall()[0][0]
-
-            added = 0
-
-            for line in csv_reader:
-                
-                command_header = "INSERT INTO zno_persons"
-                column_names = "( "
-                values_header = "VALUES"
-                values_body = "( "
-
-                if records_count > 0:
-                    records_count -= 1
-                    continue
-
-                if(len(line) + 1 != len(structure)):
-                    print("Whoops ... ¯\_(ツ)_/¯")
-                    return 0
-
-                for i in range(len(line)):
-
-                    line[i] = line[i].replace('"', '')
-                    line[i] = line[i].replace("'", "")
-                    line[i] = line[i].replace(",0", "")
-                    line[i] = line[i].replace(",5", "")
-
-                    column_names += structure[i] +", "
-                    if(line[i] != "null"):
-                        values_body += "'"+line[i]+"'" + ", "
-                    else:
-                        values_body += "DEFAULT " + ", " 
-                
-                column_names += "year" + ")" 
-                values_body += "'"+str(year)+"'" + ")"
-
-                command = command_header + column_names + values_header + values_body
-
-                cur.execute(command)
-                added += 1
-                if(added%100 == 0):
-                    conn.commit() 
-                    added = 0
-
-def getCompare():
-    if not os.path.exists("result.csv"):
-        f = open("result.csv","w+")
-        f.close()
-
-    conn_string = GetSection("connection_string")
-
-    conn = psycopg2.connect(conn_string)
-    cur = conn.cursor()
+	with open(fileName, "r", encoding="cp1251") as csv_file:
+		i = 0
+		batches_num = 0
+		start_time = datetime.datetime.now()
+		csv_reader = csv.DictReader(csv_file, delimiter=';')
+		document_bundle = []
+		num_inserted = db.inserted_docs.find_one({"yearToStart": yearToStart})
+		if num_inserted == None:
+			num_inserted = 0
+		else:
+			num_inserted = num_inserted["num_docs"]
+		for row in csv_reader:
+			if batches_num * batch_size + i < num_inserted:
+				i += 1
+				if i == batch_size:
+					i = 0
+					batches_num += 1
+				continue
+			document = row
+			document['yearToStart'] = yearToStart
+			document_bundle.append(document)
+			i += 1
+			if i == batch_size:
+				i = 0
+				batches_num += 1
+				db.collection_zno_data.insert_many(document_bundle)
+				document_bundle = []
+				if batches_num == 1:
+					db.inserted_docs.insert_one({"num_docs": batch_size, "yearToStart": yearToStart})
+				else:
+					db.inserted_docs.update_one({
+						"yearToStart": yearToStart, "num_docs": (batches_num - 1) * batch_size}, 
+						{"$inc": {
+							"num_docs": batch_size
+						}  })
+		if i != 0 and document_bundle:
+			db.inserted_docs.update_one({
+				"yearToStart": yearToStart, "num_docs": batches_num * batch_size}, 
+				{"$inc": {
+					"num_docs": i
+				}  })
+			db.collection_zno_data.insert_many(document_bundle)
+		end_time = datetime.datetime.now()
+		print('time:', end_time - start_time)
     
-    with open('result.csv', mode='w') as res_file:
-        fieldnames = ['2019AvgResult', '2020AvgResult']
-        cur.execute("""select 
-                        (select 
-                        avg(mathball100)
-                    from zno_persons
-                    where 
-                        year=2019
-                        and mathteststatus = 'Зараховано'),
-                        (select 
-                        avg(mathball100)
-                    from zno_persons
-                    where 
-                        year=2020
-                        and mathteststatus = 'Зараховано')""")
-        writer = csv.DictWriter(res_file, fieldnames=fieldnames)
-        writer.writeheader()
-        res = cur.fetchall()
-        writer.writerow({"2019AvgResult":res[0][0], "2020AvgResult":res[0][1]})
-        return (res[0][0], res[0][1])
+def getCompare():
+	result = {
+		"2019":0,
+		"2020":0
+	}
+	pipeline = [
+    {
+        u"$match": {
+            u"mathTestStatus": u"\u0417\u0430\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u043E"
+        }
+    }, 
+    {
+        u"$group": {
+            u"_id": {
+                u"year": u"$yearToStart"
+            },
+            u"avg_score": {
+                u"$avg": {
+                    u"$toInt": {
+                        u"$substr": [
+                            u"$mathBall100",
+                            0.0,
+                            3.0
+                        ]
+                    }
+                }
+            }
+        }
+    }
+	]
+
+	for res in db.collection_zno_data.aggregate(pipeline):
+		result[res["_id"]["year"]] = res["avg_score"]
+
+	return result;
+
